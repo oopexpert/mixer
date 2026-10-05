@@ -1,0 +1,225 @@
+{
+  "comPortProvider" : {
+    "type" : "CONFIG_DERIVED",
+    "file" : null
+  },
+  "requireRecipeToken" : true,
+  "ingredients" : [ {
+    "type" : "LIQUID",
+    "name" : "Orangensaft Typ 1",
+    "uuid" : "10000000-0000-0000-0000-000000000002"
+  }, {
+    "type" : "LIQUID",
+    "name" : "Tonic Water",
+    "uuid" : "10000000-0000-0000-0000-000000000003"
+  }, {
+    "type" : "LIQUID",
+    "name" : "Zitronenlimonade",
+    "uuid" : "10000000-0000-0000-0000-000000000009"
+  }, {
+    "type" : "LIQUID",
+    "name" : "Soda Water",
+    "uuid" : "10000000-0000-0000-0000-000000000010"
+  }, {
+    "type" : "LIQUID",
+    "name" : "Wodka (manuell)",
+    "uuid" : "10000000-0000-0000-0000-000000000001"
+  }, {
+    "type" : "LIQUID",
+    "name" : "Gin (manuell)",
+    "uuid" : "10000000-0000-0000-0000-000000000004"
+  }, {
+    "type" : "VISCOUS",
+    "name" : "Grenadine (manuell)",
+    "uuid" : "10000000-0000-0000-0000-000000000005"
+  }, {
+    "type" : "CRYSTAL",
+    "name" : "Zucker (manuell)",
+    "uuid" : "10000000-0000-0000-0000-000000000006"
+  }, {
+    "type" : "ADDON",
+    "name" : "Limettenscheibe (manuell)",
+    "uuid" : "10000000-0000-0000-0000-000000000007"
+  }, {
+    "type" : "ADDON",
+    "name" : "Minzblatt (manuell)",
+    "uuid" : "10000000-0000-0000-0000-000000000008"
+  } ],
+  "comIngredients" : [ {
+    "uuid" : "20000000-0000-0000-0000-000000000001",
+    "com" : "COM4",
+    "ingredient" : "10000000-0000-0000-0000-000000000002",
+    "calibration" : 1000
+  }, {
+    "uuid" : "20000000-0000-0000-0000-000000000002",
+    "com" : "COM5",
+    "ingredient" : "10000000-0000-0000-0000-000000000003",
+    "calibration" : 1000
+  }, {
+    "uuid" : "20000000-0000-0000-0000-000000000003",
+    "com" : "COM6",
+    "ingredient" : "10000000-0000-0000-0000-000000000009",
+    "calibration" : 1000
+  }, {
+    "uuid" : "20000000-0000-0000-0000-000000000004",
+    "com" : "COM7",
+    "ingredient" : "10000000-0000-0000-0000-000000000010",
+    "calibration" : 1000
+  } ],
+  "recipes" : [ {
+    "name" : "Vodka Orange (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000001",
+      "durationMilliseconds" : 1600
+    }, {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000002",
+      "durationMilliseconds" : 10400
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000007"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000001"
+  }, {
+    "name" : "Gin Tonic (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000004",
+      "durationMilliseconds" : 1600
+    }, {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000003",
+      "durationMilliseconds" : 10400
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000008"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000002"
+  }, {
+    "name" : "Vodka Sunrise (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000001",
+      "durationMilliseconds" : 1600
+    }, {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000002",
+      "durationMilliseconds" : 10400
+    }, {
+      "type" : "VISCOUS",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000005"
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000007"
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000008"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000003"
+  }, {
+    "name" : "Sweet Vodka Lemon (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000001",
+      "durationMilliseconds" : 1600
+    }, {
+      "type" : "CRYSTAL",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000006",
+      "rotations" : 1
+    }, {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000009",
+      "durationMilliseconds" : 10400
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000007"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000004"
+  }, {
+    "name" : "Orange Mint (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "CRYSTAL",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000006",
+      "rotations" : 1
+    }, {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000002",
+      "durationMilliseconds" : 12000
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000008"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000005"
+  }, {
+    "name" : "Sunset Tonic (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000003",
+      "durationMilliseconds" : 12000
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000007"
+    }, {
+      "type" : "VISCOUS",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000005"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000006"
+  }, {
+    "name" : "Lemon Soda (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000009",
+      "durationMilliseconds" : 12000
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000007"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000007"
+  }, {
+    "name" : "Tonic Soda (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000003",
+      "durationMilliseconds" : 6000
+    }, {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000010",
+      "durationMilliseconds" : 6000
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000008"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000008"
+  }, {
+    "name" : "Vodka Lemon (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000001",
+      "durationMilliseconds" : 1600
+    }, {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000009",
+      "durationMilliseconds" : 10400
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000007"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-000000000009"
+  }, {
+    "name" : "Gin Lemon (300ml)",
+    "recipeIngredients" : [ {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000004",
+      "durationMilliseconds" : 1600
+    }, {
+      "type" : "LIQUID",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000009",
+      "durationMilliseconds" : 10400
+    }, {
+      "type" : "ADDON",
+      "ingredientUUID" : "10000000-0000-0000-0000-000000000008"
+    } ],
+    "uuid" : "30000000-0000-0000-0000-00000000000a"
+  } ]
+}

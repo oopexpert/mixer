@@ -1,0 +1,91 @@
+{
+  "ingredients": [
+    {
+      "uuid": "11111111-1111-1111-1111-111111111111",
+      "type": "LIQUID",
+      "name": "Zutat 1"
+    },
+    {
+      "uuid": "11111111-1111-1111-1111-111111111112",
+      "type": "LIQUID",
+      "name": "Zutat 2"
+    },
+    {
+      "uuid": "11111111-1111-1111-1111-111111111113",
+      "type": "LIQUID",
+      "name": "Zutat 3"
+    },
+    {
+      "uuid": "11111111-1111-1111-1111-111111111114",
+      "type": "LIQUID",
+      "name": "Zutat 4"
+    },
+    {
+      "uuid": "11111111-1111-1111-1111-111111111115",
+      "type": "LIQUID",
+      "name": "Zutat 5"
+    }
+  ],
+  "comPortProvider": {
+    "type": "REAL"
+  },
+  "comIngredients": [
+    {
+      "uuid": "aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+      "com": "COM9",
+      "ingredient": "11111111-1111-1111-1111-111111111111",
+      "calibration": 2000
+    },
+    {
+      "uuid": "aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa2",
+      "com": "COM10",
+      "ingredient": "11111111-1111-1111-1111-111111111112",
+      "calibration": 2000
+    },
+    {
+      "uuid": "aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa3",
+      "com": "COM11",
+      "ingredient": "11111111-1111-1111-1111-111111111113",
+      "calibration": 2000
+    },
+    {
+      "uuid": "aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa4",
+      "com": "COM12",
+      "ingredient": "11111111-1111-1111-1111-111111111114",
+      "calibration": 2000
+    }
+  ],
+  "recipes": [
+    {
+      "uuid": "bbbbbbb1-bbbb-bbbb-bbbb-bbbbbbbbbbb1",
+      "name": "Wein",
+      "recipeIngredients": [
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "11111111-1111-1111-1111-111111111111",
+          "durationMilliseconds": 3000
+        },
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "11111111-1111-1111-1111-111111111112",
+          "durationMilliseconds": 1000
+        },
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "11111111-1111-1111-1111-111111111115",
+          "durationMilliseconds": 3000
+        },
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "11111111-1111-1111-1111-111111111113",
+          "durationMilliseconds": 2000
+        },
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "11111111-1111-1111-1111-111111111114",
+          "durationMilliseconds": 3000
+        }
+      ]
+    }
+  ]
+}

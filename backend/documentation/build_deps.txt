@@ -1,0 +1,2 @@
+# Run from the repository root (PowerShell). Analyzes backend/target/staging in an ARM64 container.
+docker run --rm --platform linux/arm64 -v ${PWD}\backend\target\staging:/staging eclipse-temurin:21-jdk bash -c "jdeps --multi-release 21 --ignore-missing-deps --print-module-deps /staging/*.jar 2>/dev/null"

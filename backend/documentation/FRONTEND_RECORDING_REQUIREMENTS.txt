@@ -1,0 +1,433 @@
+================================================================================
+ANFORDERUNGEN: AUFZEICHNUNGSMODUS (RECORDING MODE)
+Frontend-Spezifikation fuer den Oberflaechenentwickler
+Stand: Mai 2026
+================================================================================
+
+
+INHALTSVERZEICHNIS
+------------------
+1. Ueberblick
+2. Zugriffsrechte und Navigation
+3. Ablauf des Aufzeichnungsmodus (Schritt fuer Schritt)
+4. API-Endpunkte
+5. Zeitberechnung durch die Oberflaeche
+6. Referenz-Anzeige: Urspruengliche Abfuellzeiten
+7. Zustandsmodell und Fehlerfaelle
+8. UI-Elemente (Vorschlaege)
+
+
+--------------------------------------------------------------------------------
+1. UEBERBLICK
+--------------------------------------------------------------------------------
+
+Der Aufzeichnungsmodus erlaubt es einem eingeloggten Admin, ein Rezept
+"manuell abzufuellen" und dabei die tatsaechlich gebrauchten Zeiten je Zutat
+aufzuzeichnen. Am Ende kann das Ergebnis als neues (oder ueberarbeitetes) Rezept
+gespeichert werden.
+
+Kernidee:
+- Pro Zutat kann der Admin den Port MEHRFACH ein- und ausschalten (Feinjustierung).
+- Die Gesamtzeit ergibt sich aus der SUMME aller Ein/Aus-Zyklen dieser Zutat.
+- Die urspruengliche Abfuellzeit aus dem Quellrezept wird IMMER als Referenz
+  angezeigt, damit der Admin vergleichen kann.
+- Am Ende aller Zutaten wird gefragt, ob das Rezept gespeichert werden soll.
+
+Der Aufzeichnungsmodus steht nur Admins zur Verfuegung (adminToken erforderlich).
+
+
+--------------------------------------------------------------------------------
+2. ZUGRIFFSRECHTE UND NAVIGATION
+--------------------------------------------------------------------------------
+
+- Der Admin kann im Admin-Panel zwischen normalem Admin-Panel und User-Panel
+  wechseln (bestehende Funktionalitaet).
+- Bei der Rezeptauswahl im User-Panel (oder einem gesonderten Bereich im
+  Admin-Panel) gibt es fuer den Admin eine zusaetzliche Option:
+  "Aufzeichnungsmodus starten" (neben dem normalen "Abfuellen"-Button).
+- Der Aufzeichnungsmodus kann NUR gestartet werden, wenn der Mixer idle ist
+  (Status: MixerDispenseState / "bereit fuer Abfuellung").
+
+
+--------------------------------------------------------------------------------
+3. ABLAUF DES AUFZEICHNUNGSMODUS (SCHRITT FUER SCHRITT)
+--------------------------------------------------------------------------------
+
+SCHRITT A: Aufzeichnungssession starten
+  - Admin waehlt ein Rezept und klickt "Aufzeichnen".
+  - Oberflaeche ruft POST /admin/recording/start/{recipeUuid} auf.
+  - Response enthaelt: Session-ID, Rezeptname, Anzahl Schritte, erster Schritt.
+  - Oberflaeche wechselt in den Aufzeichnungs-Screen.
+
+SCHRITT B: Zutat aufzeichnen (wird fuer jede Zutat wiederholt)
+  - Oberflaeche zeigt die aktuelle Zutat an:
+    * Name der Zutat
+    * Port-Name (COM3 etc.)
+    * Urspruengliche Abfuellzeit aus dem Quellrezept (zum Vergleich)
+    * Akkumulierte Zeit der bisherigen Zyklen (dynamisch aktualisierende Uhr)
+    * Liste der bisherigen Zyklen (startedAt, stoppedAt, Dauer)
+
+  - B1: Admin drueckt "Einschalten"
+    -> POST /admin/recording/ingredient/start
+    -> Response: { startedAt, cycleIndex, ... }
+    -> Oberflaeche startet eine Stoppuhr (Laufzeit = currentTime - startedAt)
+    -> Button wechselt zu "Ausschalten"
+
+  - B2: Admin drueckt "Ausschalten"
+    -> POST /admin/recording/ingredient/stop
+    -> Response: { startedAt, stoppedAt, cycleDurationMs, totalDurationMs, ... }
+    -> Stoppuhr wird gestoppt
+    -> Zyklus wird in der Liste angezeigt
+    -> Akkumulierte Gesamtzeit wird aktualisiert
+    -> Admin kann erneut "Einschalten" druecken (neuer Zyklus, Feinjustierung)
+
+  - B3: Admin ist zufrieden und drueckt "Weiter"
+    -> POST /admin/recording/ingredient/next
+    -> Response: { sessionComplete, currentStepIndex, currentStep, completedStepSummary }
+    -> Falls sessionComplete = false: naechste Zutat anzeigen (zurueck zu B)
+    -> Falls sessionComplete = true: weiter zu Schritt C
+
+  HINWEIS: Falls der Port noch eingeschaltet ist wenn "Weiter" gedrueckt wird,
+  stoppt der Server ihn automatisch und schliesst den Zyklus ab.
+
+SCHRITT C: Speicher-Dialog
+  - Oberflaeche zeigt eine Uebersicht aller aufgezeichneten Zutaten mit:
+    * Zutat, Port, urspruengliche Zeit, aufgezeichnete Gesamtzeit, Differenz
+  - Admin wird gefragt: "Rezept speichern?"
+  - Eingabefeld fuer Rezeptname (vorbelegt mit Originalname oder z.B. "Original (aufgezeichnet)")
+  - Checkbox/Toggle: "Originalrezept ersetzen" (Standard: AUS = neues Rezept anlegen)
+  - Buttons: "Speichern" und "Verwerfen"
+
+  - C1: "Speichern" -> POST /admin/recording/save
+    Body: { "recipeName": "...", "replaceSourceRecipe": true/false }
+    -> Response: das gespeicherte Recipe-Objekt
+    -> Oberflaeche zeigt Erfolgsmeldung, kehrt zur Rezeptliste zurueck
+
+  - C2: "Verwerfen" -> POST /admin/recording/abort
+    -> Session wird geloescht, Mixer bleibt idle
+    -> Oberflaeche kehrt zur Rezeptliste zurueck
+
+ABBRUCH (jederzeit moeglich):
+  - "Abbrechen"-Button immer sichtbar im Aufzeichnungs-Screen
+  -> POST /admin/recording/abort
+  -> Oberflaeche kehrt zur Rezeptliste zurueck
+
+
+--------------------------------------------------------------------------------
+4. API-ENDPUNKTE
+--------------------------------------------------------------------------------
+
+Alle Endpunkte erfordern den Query-Parameter: ?adminToken=<passwort>
+Basis-URL: http://<host>:8080
+
+----
+
+POST /admin/recording/start/{recipeUuid}
+  Startet eine Aufzeichnungssession fuer das angegebene Rezept.
+  Nur moeglich wenn Mixer idle (MixerDispenseState).
+
+  Response 200:
+  {
+    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+    "sourceRecipeUuid": "...",
+    "sourceRecipeName": "Gin Tonic",
+    "totalSteps": 2,
+    "currentStepIndex": 0,
+    "sessionComplete": false,
+    "currentStep": {
+      "ingredientUuid": "...",
+      "ingredientName": "Gin",
+      "portName": "COM3",
+      "originalDurationMs": 2000,    <- Referenzwert aus Quellrezept, null falls nicht verfuegbar
+      "cycleCount": 0,
+      "totalDurationMs": 0,
+      "portCurrentlyOn": false
+    }
+  }
+
+  Response 400: Rezept hat keine COM-Port-Zutaten zum Aufzeichnen
+  Response 404: Rezept nicht gefunden
+  Response 409: Mixer nicht idle
+
+----
+
+POST /admin/recording/ingredient/start
+  Schaltet den Port der aktuellen Zutat EIN. Startet einen neuen Zyklus.
+  Kann mehrfach aufgerufen werden (nach jeweiligem Stop).
+
+  Response 200:
+  {
+    "ingredientUuid": "...",
+    "ingredientName": "Gin",
+    "portName": "COM3",
+    "startedAt": 1716058800000,   <- Epoch ms (Serverzeit) - fuer Stoppuhr-Berechnung
+    "cycleIndex": 0,              <- 0-basierter Index dieses Zyklus
+    "originalDurationMs": 2000
+  }
+
+  Response 400: Port bereits eingeschaltet
+  Response 409: Keine aktive Session / falscher State
+
+----
+
+POST /admin/recording/ingredient/stop
+  Schaltet den Port der aktuellen Zutat AUS. Beendet den laufenden Zyklus.
+
+  Response 200:
+  {
+    "ingredientUuid": "...",
+    "ingredientName": "Gin",
+    "portName": "COM3",
+    "cycleIndex": 0,
+    "startedAt": 1716058800000,   <- Epoch ms (Serverzeit)
+    "stoppedAt": 1716058802000,   <- Epoch ms (Serverzeit)
+    "cycleDurationMs": 2000,      <- Dauer dieses Zyklus in ms
+    "totalDurationMs": 2000,      <- Kumulierte Gesamtzeit aller Zyklen dieser Zutat
+    "originalDurationMs": 2000    <- Referenzwert aus Quellrezept (zum Vergleich)
+  }
+
+  Response 400: Port nicht eingeschaltet
+  Response 409: Keine aktive Session
+
+----
+
+POST /admin/recording/ingredient/next
+  Schliesst den aktuellen Schritt ab, rueckt zur naechsten Zutat vor.
+  Falls der Port noch an ist: wird automatisch gestoppt.
+
+  Response 200 (naechster Schritt vorhanden):
+  {
+    "sessionComplete": false,
+    "currentStepIndex": 1,
+    "currentStep": {
+      "ingredientUuid": "...",
+      "ingredientName": "Tonic Water",
+      "portName": "COM4",
+      "originalDurationMs": 3000,
+      "cycleCount": 0,
+      "totalDurationMs": 0,
+      "portCurrentlyOn": false
+    },
+    "completedStepSummary": {
+      "ingredientName": "Gin",
+      "totalDurationMs": 2000,
+      "originalDurationMs": 2000,
+      ...
+    }
+  }
+
+  Response 200 (letzter Schritt abgeschlossen):
+  {
+    "sessionComplete": true,
+    "currentStepIndex": 2,
+    "currentStep": null,
+    "completedStepSummary": { ... }
+  }
+
+----
+
+GET /admin/recording/session
+  Gibt den vollstaendigen Zustand der aktuellen Session zurueck.
+  Nuetzlich fuer Seitenneulade oder Polling.
+
+  Response 200:
+  {
+    "sessionId": "...",
+    "sourceRecipeUuid": "...",
+    "sourceRecipeName": "Gin Tonic",
+    "totalSteps": 2,
+    "currentStepIndex": 1,
+    "sessionComplete": false,
+    "currentStep": { ... },
+    "steps": [
+      {
+        "ingredientUuid": "...",
+        "ingredientName": "Gin",
+        "portName": "COM3",
+        "originalDurationMs": 2000,
+        "cycleCount": 2,
+        "totalDurationMs": 3500,
+        "portCurrentlyOn": false,
+        "cycles": [
+          { "startedAt": 1716058800000, "stoppedAt": 1716058802000, "durationMs": 2000, "running": false },
+          { "startedAt": 1716058805000, "stoppedAt": 1716058806500, "durationMs": 1500, "running": false }
+        ]
+      },
+      {
+        "ingredientUuid": "...",
+        "ingredientName": "Tonic Water",
+        "portName": "COM4",
+        "originalDurationMs": 3000,
+        "cycleCount": 0,
+        "totalDurationMs": 0,
+        "portCurrentlyOn": false,
+        "cycles": []
+      }
+    ]
+  }
+
+  Response 404: Keine aktive Session
+
+----
+
+POST /admin/recording/save
+  Speichert die abgeschlossene Session als Rezept.
+  Nur aufrufbar wenn sessionComplete = true.
+
+  Request-Body (JSON):
+  {
+    "recipeName": "Gin Tonic (kalibriert)",
+    "replaceSourceRecipe": false    <- true = Originalrezept ersetzen, false = neues Rezept
+  }
+
+  Response 200: Das gespeicherte Recipe-Objekt (gleiche Struktur wie /user/recipes)
+  Response 400: recipeName fehlt oder leer
+  Response 409: Session nicht vorhanden oder noch nicht abgeschlossen
+
+----
+
+POST /admin/recording/abort
+  Bricht die Session ab. Port wird gestoppt falls aktiv.
+  Mixer kehrt in Idle-State zurueck.
+
+  Response 200: "Aufzeichnung abgebrochen."
+
+
+--------------------------------------------------------------------------------
+5. ZEITBERECHNUNG DURCH DIE OBERFLAECHE
+--------------------------------------------------------------------------------
+
+Die Oberflaeche berechnet die angezeigte Gesamtzeit SELBST, um eine fluessige
+Echtzeit-Darstellung ohne staendiges Polling zu ermoeglichen.
+
+PRINZIP:
+  Gesamtzeit einer Zutat =
+    Summe aller abgeschlossenen Zyklen (stoppedAt_i - startedAt_i)
+    + falls ein Zyklus laeuft: (Date.now() - startedAt_laufend)
+
+ALLE TIMESTAMPS sind serverseitige Epoch-Millisekunden (Unix Timestamp ms).
+
+EMPFOHLENES VORGEHEN:
+  1. Nach POST /ingredient/start: startedAt aus der Response speichern.
+     Stoppuhr mit setInterval(16ms) starten:
+       angezeigteZeit = bisherige_abgeschlossene_zyklen_ms + (Date.now() - startedAt)
+  2. Nach POST /ingredient/stop: stoppedAt aus der Response verwenden.
+     Stoppuhr stoppen. totalDurationMs aus Response als neue Basis setzen.
+  3. Bei erneutem POST /ingredient/start: Stoppuhr wieder starten.
+  4. Die exakten Einzel-Dauern koennen aus den Cycle-Daten in GET /session berechnet werden:
+       Zyklus-Dauer = stoppedAt - startedAt
+
+HINWEIS: Date.now() vs. Serverzeit koennen leicht abweichen (Netzwerklatenz).
+Fuer die ANZEIGE (Stoppuhr) ist Date.now() ausreichend genau.
+Fuer die GESPEICHERTE Dauer verwendet der Server seine eigene Zeit (stoppedAt - startedAt).
+Die vom Server berechnete totalDurationMs in der Stop-Response ist die massgebliche Groesse.
+
+
+--------------------------------------------------------------------------------
+6. REFERENZ-ANZEIGE: URSPRUENGLICHE ABFUELLZEITEN
+--------------------------------------------------------------------------------
+
+Fuer jede aufzuzeichnende Zutat liefert das Backend das Feld:
+  "originalDurationMs": <number | null>
+
+  - number: Abfuellzeit (ms) aus dem Quellrezept (nur bei Fluessigkeiten verfuegbar)
+  - null: Keine Referenz verfuegbar (z.B. Kristallzutat)
+
+EMPFOHLENE DARSTELLUNG im Aufzeichnungs-Screen:
+  +------------------------------------------+
+  | Zutat: Gin          Port: COM3            |
+  |                                           |
+  | Referenz (Rezept):  2,0 s                 |
+  | Aufgezeichnet:      3,5 s  <- laufend     |
+  | Differenz:         +1,5 s                 |
+  |                                           |
+  | Zyklen: [2,0s] [1,5s]                     |
+  |                                           |
+  | [EINSCHALTEN]  [AUSSCHALTEN]  [WEITER >]  |
+  +------------------------------------------+
+
+Im finalen Speicher-Dialog sollte eine Tabelle erscheinen:
+  Zutat       | Port | Urspruengl. | Aufgezeichnet | Differenz
+  ------------|------|-------------|---------------|----------
+  Gin         | COM3 |       2,0 s |         3,5 s |    +1,5 s
+  Tonic Water | COM4 |       3,0 s |         2,8 s |    -0,2 s
+
+
+--------------------------------------------------------------------------------
+7. ZUSTANDSMODELL UND FEHLERFAELLE
+--------------------------------------------------------------------------------
+
+MIXER-STATES IM AUFZEICHNUNGSMODUS:
+  MixerDispenseState      -> Idle, Aufzeichnung kann gestartet werden
+  RecordingIngredientState -> Aufzeichnung aktiv (Schritt N wird aufgezeichnet)
+  MixerDispenseState      -> Session abgeschlossen, Speichern moeglich
+
+Der Mixer-State kann ueber GET /user/status abgefragt werden.
+Im Aufzeichnungsmodus ist der State "RecordingIngredientState" mit entsprechender
+Description (z.B. "Aufzeichnungsmodus: Schritt 1/2 - Zutat 'Gin' (Port: COM3)").
+
+FEHLERFAELLE UND EMPFOHLENE BEHANDLUNG:
+
+  HTTP 400 "Port bereits eingeschaltet"
+    -> Zustand synchronisieren (GET /recording/session), UI-State aktualisieren
+
+  HTTP 400 "Port nicht eingeschaltet"
+    -> Analog
+
+  HTTP 409 "Keine aktive Aufzeichnungssession"
+    -> Session wurde moeglicherweise durch Server-Neustart verloren.
+       Fehlermeldung anzeigen, zur Rezeptliste navigieren.
+
+  HTTP 409 "Mixer nicht idle"
+    -> Aufzeichnung kann nicht gestartet werden. Fehlermeldung: "System ist
+       beschaeftigt, bitte warten."
+
+  HTTP 409 "Session noch nicht abgeschlossen"
+    -> Nicht alle Zutaten wurden durchlaufen. Zurueck zum Aufzeichnungs-Screen.
+
+  HTTP 500 beim Speichern
+    -> Fehlermeldung anzeigen. Session bleibt erhalten, Admin kann erneut versuchen.
+
+NETZWERKUNTERBRECHUNG / SEITEN-NEULADE:
+  - GET /admin/recording/session kann die Session vollstaendig wiederherstellen.
+  - Die Oberflaeche sollte beim Laden pruefen ob eine Session aktiv ist.
+  - Falls sessionComplete = true: Direkt zum Speicher-Dialog springen.
+  - Falls sessionComplete = false: Zum aktuellen Aufzeichnungsschritt springen.
+
+
+--------------------------------------------------------------------------------
+8. UI-ELEMENTE (VORSCHLAEGE)
+--------------------------------------------------------------------------------
+
+SCREEN: Aufzeichnungs-Screen (waehrend RecordingIngredientState)
+
+  Header:
+    "Aufzeichnungsmodus – [Rezeptname]"
+    "Schritt [X] von [N]"
+    [Abbrechen]-Button (oben rechts, immer sichtbar)
+
+  Haupt-Bereich:
+    Zutatenname (gross)
+    Port-Name
+    Referenzzeit (aus Quellrezept): "[X,X s]" oder "– (keine Referenz)"
+    Gesamtzeit (live, Stoppuhr-Format): "0:00.000"
+    Differenz zur Referenz: "+X,X s" (gruen/rot je nach Richtung)
+
+  Zyklen-Liste:
+    Jeder abgeschlossene Zyklus als Zeile: "Zyklus [N]: [Dauer]"
+    Laufender Zyklus: "Zyklus [N]: [laufend...]"
+
+  Steuerung:
+    [EINSCHALTEN]   -> deaktiviert wenn Port an
+    [AUSSCHALTEN]   -> deaktiviert wenn Port aus
+    [WEITER >]      -> immer aktiv (auto-stoppt Port falls an)
+
+SCREEN: Speicher-Dialog (nach sessionComplete = true)
+
+  Titel: "Aufzeichnung abgeschlossen"
+  Zusammenfassungs-Tabelle (s. Abschnitt 6)
+  Eingabefeld: "Rezeptname" (vorbelegt mit "[Originalname] (aufgezeichnet)")
+  Toggle: "Originalrezept ersetzen" (Standard: AUS)
+  Buttons: [SPEICHERN] [VERWERFEN]
+
+================================================================================

@@ -1,0 +1,60 @@
+{
+	"ingredients": [
+		{
+			"uuid": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "LIQUID",
+			"name": "Rotwein (trocken)"
+		},
+		{
+			"uuid": "67c3c260-20e1-4e41-949e-97641f6e2b92",
+			"type": "LIQUID",
+			"name": "Zitronenlimonade"
+		}
+	],
+	"comPortProvider": {
+		"type": "CONFIG_DERIVED"
+	},
+	"comIngredients": [
+		{
+			"uuid": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+			"com": "COM5",
+			"ingredient": "550e8400-e29b-41d4-a716-446655440000",
+			"calibration": 2000
+		},
+		{
+			"uuid": "8e363606-f77e-40e1-9556-91599388f8d6",
+			"com": "COM6",
+			"ingredient": "67c3c260-20e1-4e41-949e-97641f6e2b92",
+			"calibration": 1850
+		}
+	],
+	"recipes": [
+		{
+			"uuid": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+			"name": "Tinto de Verano",
+			"recipeIngredients": [
+				{
+					"type": "LIQUID",
+					"ingredientUUID": "550e8400-e29b-41d4-a716-446655440000",
+					"durationMilliseconds": 5000
+				},
+				{
+					"type": "LIQUID",
+					"ingredientUUID": "67c3c260-20e1-4e41-949e-97641f6e2b92",
+					"durationMilliseconds": 5000
+				}
+			]
+		},
+		{
+			"uuid": "a1b2c3d4-e5f6-4a5b-bc6d-7e8f9a0b1c2d",
+			"name": "Rotwein pur (groß)",
+			"recipeIngredients": [
+				{
+					"type": "LIQUID",
+					"ingredientUUID": "550e8400-e29b-41d4-a716-446655440000",
+					"durationMilliseconds": 8000
+				}
+			]
+		}
+	]
+}

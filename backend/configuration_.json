@@ -1,0 +1,122 @@
+{
+  
+  "ingredients": [
+    {
+      "uuid": "11111111-1111-1111-1111-111111111111",
+      "type": "LIQUID",
+      "name": "Rum"
+    },
+    {
+      "uuid": "22222222-2222-2222-2222-222222222222",
+      "type": "LIQUID",
+      "name": "Soda"
+    },
+    {
+      "uuid": "33333333-3333-3333-3333-333333333333",
+      "type": "LIQUID",
+      "name": "Minze"
+    },
+    {
+      "uuid": "44444444-4444-4444-4444-444444444444",
+      "type": "LIQUID",
+      "name": "Cachaça"
+    },
+    {
+      "uuid": "55555555-5555-5555-5555-555555555555",
+      "type": "LIQUID",
+      "name": "Limette"
+    },
+    {
+      "uuid": "66666666-6666-6666-6666-666666666666",
+      "type": "CRYSTAL",
+      "name": "Zucker"
+    }
+  ],
+  "comPortProvider" : {
+    "type" : "CONFIG_DERIVED"
+  },
+  "comIngredients": [
+    {
+      "uuid": "aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+      "com": "COM3",
+      "ingredient": "11111111-1111-1111-1111-111111111111",
+      "calibration": 3000
+    },
+    {
+      "uuid": "aaaaaaa2-aaaa-aaaa-aaaa-aaaaaaaaaaa2",
+      "com": "COM4",
+      "ingredient": "22222222-2222-2222-2222-222222222222",
+      "calibration": 2000
+    },
+    {
+      "uuid": "aaaaaaa3-aaaa-aaaa-aaaa-aaaaaaaaaaa3",
+      "com": "COM5",
+      "ingredient": "33333333-3333-3333-3333-333333333333",
+      "calibration": 1000
+    },
+    {
+      "uuid": "aaaaaaa4-aaaa-aaaa-aaaa-aaaaaaaaaaa4",
+      "com": "COM6",
+      "ingredient": "44444444-4444-4444-4444-444444444444",
+      "calibration": 3000
+    },
+    {
+      "uuid": "aaaaaaa5-aaaa-aaaa-aaaa-aaaaaaaaaaa5",
+      "com": "COM7",
+      "ingredient": "55555555-5555-5555-5555-555555555555",
+      "calibration": 1500
+    },
+    {
+      "uuid": "aaaaaaa6-aaaa-aaaa-aaaa-aaaaaaaaaaa6",
+      "com": "COM8",
+      "ingredient": "66666666-6666-6666-6666-666666666666",
+      "calibration": 500
+    }
+  ],
+
+  "recipes": [
+    {
+      "uuid": "bbbbbbb1-bbbb-bbbb-bbbb-bbbbbbbbbbb1",
+      "name": "Mojito",
+      "recipeIngredients": [
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "11111111-1111-1111-1111-111111111111",
+          "durationMilliseconds": 3000
+        },
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "22222222-2222-2222-2222-222222222222",
+          "durationMilliseconds": 2000
+        },
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "33333333-3333-3333-3333-333333333333",
+          "durationMilliseconds": 1000
+        }
+      ]
+    },
+
+    {
+      "uuid": "bbbbbbb2-bbbb-bbbb-bbbb-bbbbbbbbbbb2",
+      "name": "Caipirinha",
+      "recipeIngredients": [
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "44444444-4444-4444-4444-444444444444",
+          "durationMilliseconds": 3000
+        },
+        {
+          "type": "LIQUID",
+          "ingredientUUID": "55555555-5555-5555-5555-555555555555",
+          "durationMilliseconds": 1000
+        },
+        {
+          "type": "CRYSTAL",
+          "ingredientUUID": "66666666-6666-6666-6666-666666666666",
+          "rotations": 2
+        }
+      ]
+    }
+  ]
+}

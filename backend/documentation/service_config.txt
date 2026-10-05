@@ -1,0 +1,25 @@
+
+[Unit]
+Description=SmartMixer
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/SmartMixer
+ExecStart=/home/pi/SmartMixer/bin/SmartMixer
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+sudo systemctl daemon-reload
+sudo systemctl enable smartmixer
+sudo systemctl start smartmixer
+
+sudo vi /etc/systemd/system/smartmixer.service
+
+chmod +x /home/pi/SmartMixer/bin/SmartMixer
+
+

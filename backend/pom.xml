@@ -1,0 +1,397 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>de.oopexpert.mixer</groupId>
+		<artifactId>mixer-parent</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+
+	<artifactId>mixer</artifactId>
+
+	<properties>
+		<!-- Relativ zum Monorepo: wird vom frontend-Modul gebaut (Reaktor-Reihenfolge beachten) -->
+		<frontend.dir>${project.basedir}/../frontend</frontend.dir>
+		<!-- Standard: JDK, mit dem Maven läuft. Bei Bedarf mit -Djdk.home=... übersteuern -->
+		<jdk.home>${java.home}</jdk.home>
+	</properties>
+
+	<build>
+		<plugins>
+			<!-- Gebautes Frontend (frontend/dist) nach classes/static kopieren.
+				Läuft immer, damit auch ein plain `mvn package` ein lauffähiges JAR mit UI erzeugt.
+				Das frontend-Modul läuft im Reaktor zuerst und erstellt ../frontend/dist. -->
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.3.1</version>
+				<executions>
+					<execution>
+						<id>copy-frontend-to-static</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${frontend.dir}/dist</directory>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>3.6.0</version>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/libs</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<profile>
+			<id>arm</id>
+			<build>
+				<plugins>
+
+					<!-- Zusätzliche Verzeichnisse beim Clean aufräumen -->
+					<plugin>
+						<artifactId>maven-clean-plugin</artifactId>
+						<version>3.3.2</version>
+						<configuration>
+							<filesets>
+								<fileset>
+									<directory>${project.basedir}/dist-arm</directory>
+									<followSymlinks>false</followSymlinks>
+								</fileset>
+								<fileset>
+									<directory>${project.build.directory}/staging</directory>
+								</fileset>
+								<fileset>
+									<directory>${frontend.dir}/dist</directory>
+								</fileset>
+							</filesets>
+						</configuration>
+					</plugin>
+
+					<!-- Frontend nach classes/static kopieren -->
+					<plugin>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>3.3.1</version>
+						<executions>
+							<execution>
+								<id>copy-frontend-to-static-arm</id>
+								<phase>process-resources</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${frontend.dir}/dist</directory>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<!-- Abhängigkeiten ins Staging-Verzeichnis kopieren -->
+					<plugin>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<version>3.6.0</version>
+						<executions>
+							<execution>
+								<id>copy-dependencies-to-staging-arm</id>
+								<phase>package</phase>
+								<goals>
+									<goal>copy-dependencies</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${project.build.directory}/staging</outputDirectory>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<!-- Haupt-JAR ins Staging kopieren -->
+					<plugin>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>3.1.0</version>
+						<executions>
+							<execution>
+								<id>copy-main-jar-to-staging-arm</id>
+								<phase>package</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<target>
+										<copy
+											file="${project.build.directory}/${project.build.finalName}.jar"
+											tofile="${project.build.directory}/staging/mixer-0.0.1-SNAPSHOT.jar" />
+									</target>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>3.1.0</version>
+						<executions>
+
+							<!-- Frontend wird vom frontend-Modul via frontend-maven-plugin gebaut -->
+							<!--
+								jlink + jpackage im ARM64-Docker-Container ausführen.
+								- Eingabe:  target/staging  (gemountet als /staging, read-only)
+								- Ausgabe:  dist-arm/       (gemountet als /dist-arm)
+								- Ergebnis: dist-arm/SmartMixer/  (ausführbar auf Raspberry Pi)
+							-->
+							<execution>
+								<id>docker-jlink-jpackage-arm</id>
+								<phase>install</phase>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<configuration>
+									<executable>docker</executable>
+									<arguments>
+										<argument>run</argument>
+										<argument>--rm</argument>
+										<argument>--platform</argument>
+										<argument>linux/arm64</argument>
+										<argument>-v</argument>
+										<argument>${project.build.directory}/staging:/staging:ro</argument>
+										<argument>-v</argument>
+										<argument>${project.basedir}/dist-arm:/dist-arm</argument>
+										<argument>eclipse-temurin:21-jdk</argument>
+										<argument>bash</argument>
+										<argument>-c</argument>
+										<argument>rm -rf /dist-arm/SmartMixer &amp;&amp; jlink --module-path /opt/java/openjdk/jmods --add-modules java.base,java.compiler,java.desktop,java.instrument,java.management,java.naming,java.rmi,java.scripting,java.security.jgss,java.sql,jdk.management,jdk.unsupported,jdk.zipfs --no-header-files --no-man-pages --output /tmp/mixer-runtime-arm &amp;&amp; jpackage --type app-image --dest /dist-arm --name SmartMixer --input /staging --main-jar mixer-0.0.1-SNAPSHOT.jar --main-class app.MixerApp --runtime-image /tmp/mixer-runtime-arm</argument>
+									</arguments>
+								</configuration>
+							</execution>
+
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>distribution</id>
+			<build>
+				<plugins>
+					<plugin>
+						<artifactId>maven-clean-plugin</artifactId>
+						<version>3.3.2</version>
+						<configuration>
+							<filesets>
+								<fileset>
+									<directory>${project.basedir}/dist</directory>
+									<followSymlinks>false</followSymlinks>
+								</fileset>
+								<fileset>
+									<directory>
+										${project.build.directory}/staging</directory>
+								</fileset>
+								<fileset>
+									<directory>
+										${frontend.dir}/dist</directory>
+								</fileset>
+							</filesets>
+						</configuration>
+					</plugin>
+					<plugin>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>3.3.1</version>
+						<executions>
+							<execution>
+								<id>copy-frontend-to-static</id>
+								<phase>process-resources</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>
+										${project.build.outputDirectory}/static</outputDirectory>
+									<resources>
+										<resource>
+											<directory>
+												${frontend.dir}/dist</directory>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<version>3.6.0</version>
+						<executions>
+							<execution>
+								<id>copy-dependencies-to-staging</id>
+								<phase>package</phase>
+								<goals>
+									<goal>copy-dependencies</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>
+										${project.build.directory}/staging</outputDirectory>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>3.1.0</version>
+						<executions>
+							<execution>
+								<id>copy-main-jar-to-staging</id>
+								<phase>package</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<target>
+										<copy
+											file="${project.build.directory}/${project.build.finalName}.jar"
+											tofile="${project.build.directory}/staging/mixer-0.0.1-SNAPSHOT.jar" />
+									</target>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>3.1.0</version>
+						<executions>
+							<!-- Frontend wird vom frontend-Modul via frontend-maven-plugin gebaut -->
+							<execution>
+								<id>jlink</id>
+								<phase>package</phase>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<configuration>
+									<executable>
+										${jdk.home}/bin/jlink.exe</executable>
+									<arguments>
+										<argument>
+											--module-path=${jdk.home}/jmods</argument>
+										<argument>--add-modules</argument>
+										<argument>
+											java.base,java.desktop,java.logging,java.naming,java.sql,jdk.unsupported,jdk.zipfs</argument>
+										<argument>--output</argument>
+										<argument>
+											${project.build.directory}/mixer-runtime</argument>
+									</arguments>
+								</configuration>
+							</execution>
+							<execution>
+								<id>jpackage</id>
+								<phase>install</phase>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<configuration>
+									<executable>
+										${jdk.home}/bin/jpackage.exe</executable>
+									<arguments>
+										<argument>--type</argument>
+										<argument>app-image</argument>
+										<argument>--dest</argument>
+										<argument>dist</argument>
+										<argument>--name</argument>
+										<argument>SmartMixer</argument>
+										<argument>--input</argument>
+										<argument>
+											${project.build.directory}/staging</argument>
+										<argument>--main-jar</argument>
+										<argument>mixer-0.0.1-SNAPSHOT.jar</argument>
+										<argument>--main-class</argument>
+										<argument>app.MixerApp</argument>
+										<argument>--runtime-image</argument>
+										<argument>
+											${project.build.directory}/mixer-runtime</argument>
+										<argument>--win-console</argument>
+									</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.fazecast</groupId>
+			<artifactId>jSerialComm</artifactId>
+			<version>2.10.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>5.10.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna</artifactId>
+			<version>5.13.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.18.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.javalin</groupId>
+			<artifactId>javalin</artifactId>
+			<version>7.1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>2.23.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>2.23.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-slf4j2-impl</artifactId>
+			<version>2.23.1</version>
+		</dependency>
+
+	</dependencies>
+</project>

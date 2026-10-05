@@ -1,0 +1,32 @@
+# Maven
+target/
+*.jar
+!**/src/**/*.jar
+
+# Frontend-Build-Artefakte (werden via frontend-maven-plugin frisch erzeugt)
+frontend/dist/
+frontend/node/
+frontend/node_modules/
+frontend/.vite/
+
+# Backend-Distribution (jpackage-Output, Staging)
+backend/dist/
+backend/dist-arm/
+backend/target/staging/
+
+# Backend dient das Frontend aus target/classes/static aus (generiert, nicht einchecken)
+backend/src/main/resources/static/
+
+# Logs
+*.log
+*.log.gz
+logs/
+
+# IDE / OS
+.idea/
+.vscode/
+.settings/
+.classpath
+.project
+.DS_Store
+Thumbs.db

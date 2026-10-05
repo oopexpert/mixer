@@ -51,3 +51,8 @@ Node v24 + npm 11 are installed globally (usable for ad-hoc frontend work), but 
 ## Tests
 
 - `.\mvnw.cmd test` (root) runs everything: frontend `*.test.jsx` via vitest, backend `mixer.IntegrationTest` (JUnit 5, ordered, real HTTP calls against Javalin on a random port, inlined `CONFIG_DERIVED` test config — no hardware needed).
+- CI (`.github/workflows/build.yml`) runs `./mvnw -B test` on every push/PR to `main`.
+
+## Release process
+
+Releases are cut manually via `.github/workflows/release-version.yml` (`workflow_dispatch`) and versioned from **Conventional Commits**: `fix:` = patch, `feat:` = minor, `!:` / `BREAKING CHANGE:` footer = major, everything else (`chore:`, `docs:`, `test:`, `ci:`, `refactor:`) = no release. **Write commit messages accordingly** — without a `fix:`/`feat:`/breaking commit since the last `vX.Y.Z` tag, the workflow no-ops. The workflow bumps the root `pom.xml` version (modules inherit it) + root `CHANGELOG.md`, commits and tags on `main`, builds the Windows (`-Pdistribution`) and ARM (`-Parm`) distributions, and attaches both zips to the GitHub Release.

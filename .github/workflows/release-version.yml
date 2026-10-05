@@ -1,0 +1,184 @@
+name: Release
+
+# Manual release: scans commits since the last vX.Y.Z tag (Conventional Commits:
+# '!:'/'BREAKING CHANGE:' = major, 'feat:' = minor, 'fix:' = patch, everything
+# else = no release), bumps the root pom.xml version + CHANGELOG.md, commits and
+# tags on main, then builds the Windows and ARM distributions and attaches them
+# as zips to the GitHub Release. No-ops when no release-relevant commit is found.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.version.outputs.skip }}
+      new_version: ${{ steps.version.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: version
+        run: |
+          set -e
+          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${LAST_TAG}..HEAD"
+          fi
+          echo "Last tag: $LAST_TAG"
+
+          COMMITS=$(git log $RANGE --pretty=format:"%s%n%b" || true)
+
+          BUMP="none"
+          if echo "$COMMITS" | grep -qE '^[a-zA-Z]+(\(.+\))?!:|BREAKING CHANGE:'; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -qE '^feat(\(.+\))?:'; then
+            BUMP="minor"
+          elif echo "$COMMITS" | grep -qE '^fix(\(.+\))?:'; then
+            BUMP="patch"
+          fi
+
+          echo "Bump: $BUMP"
+          if [ "$BUMP" = "none" ]; then
+            echo "No release-relevant commits found. Exiting."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Single version source: root aggregator pom (modules inherit it).
+          CURRENT=$(sed -n 's/.*<version>\(.*\)<\/version>.*/\1/p' pom.xml | head -n1)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$(echo "$CURRENT" | sed 's/-SNAPSHOT//')"
+
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH+1)) ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version and changelog
+        if: steps.version.outputs.skip == 'false'
+        run: |
+          set -e
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+          sed -i "0,/<version>.*<\/version>/s//<version>${NEW_VERSION}<\/version>/" pom.xml
+
+          DATE=$(date +%Y-%m-%d)
+          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
+          {
+            echo "## ${NEW_VERSION} (${DATE})"
+            echo
+            if [ -z "$LAST_TAG" ]; then
+              git log --pretty=format:"- %s" | grep -Ev '^- (chore|docs|test|ci|refactor)(\(.+\))?:' || true
+            else
+              git log "${LAST_TAG}..HEAD" --pretty=format:"- %s" | grep -Ev '^- (chore|docs|test|ci|refactor)(\(.+\))?:' || true
+            fi
+            echo
+            echo
+            [ -f CHANGELOG.md ] && tail -n +2 CHANGELOG.md
+          } > /tmp/CHANGELOG.new.md
+          { echo "# Changelog"; echo; cat /tmp/CHANGELOG.new.md; } > CHANGELOG.md
+
+      - name: Commit and tag
+        if: steps.version.outputs.skip == 'false'
+        run: |
+          set -e
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pom.xml CHANGELOG.md
+          git commit -m "chore(release): v${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          # Releases are intentionally cut from main only.
+          git push origin HEAD:main
+          git push origin "v${NEW_VERSION}"
+
+  build:
+    needs: version
+    if: needs.version.outputs.skip == 'false'
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            profile: distribution
+            dist-dir: backend/dist/SmartMixer
+            zip-name: SmartMixer-windows-x64.zip
+          - os: ubuntu-latest
+            profile: arm
+            dist-dir: backend/dist-arm/SmartMixer
+            zip-name: SmartMixer-linux-arm64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.new_version }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build distribution
+        # ARM profile runs jlink+jpackage inside a linux/arm64 Docker container
+        # (QEMU-emulated on x64 runners — slow, allow 10-20 min).
+        run: |
+          ./mvnw -B -P${{ matrix.profile }} -DskipTests clean install
+        shell: bash
+
+      - name: Zip distribution (Windows)
+        if: matrix.os == 'windows-latest'
+        run: Compress-Archive -Path "${{ matrix.dist-dir }}" -DestinationPath "${{ matrix.zip-name }}"
+
+      - name: Zip distribution (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: zip -qr "${{ matrix.zip-name }}" "${{ matrix.dist-dir }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.zip-name }}
+          path: ${{ matrix.zip-name }}
+
+  release:
+    needs: [version, build]
+    if: needs.version.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: v${{ needs.version.outputs.new_version }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          NEW_VERSION="${{ needs.version.outputs.new_version }}"
+          PREV_TAG=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            NOTES=$(git log --pretty=format:"- %s" | grep -Ev '^- (chore|docs|test|ci|refactor)(\(.+\))?:' || true)
+          else
+            NOTES=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s" | grep -Ev '^- (chore|docs|test|ci|refactor)(\(.+\))?:' || true)
+          fi
+
+          gh release create "v${NEW_VERSION}" artifacts/*.zip \
+            --title "v${NEW_VERSION}" \
+            --notes "$NOTES"
